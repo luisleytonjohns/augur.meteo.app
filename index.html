@@ -176,6 +176,9 @@ main{max-width:1360px;margin:0 auto;padding:8px 16px 96px}
 .mapa-caja{position:relative}
 .leyenda-radar{position:absolute;left:8px;right:8px;bottom:22px;z-index:500;background:rgba(6,18,46,.86);color:#cfe3ff;font-size:12px;line-height:1.35;padding:6px 9px;border-radius:8px;pointer-events:none}
 .leyenda-radar b{color:#fff}
+.inf-laminas{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
+.inf-laminas img{flex:0 0 auto;width:min(62vw,240px);aspect-ratio:4/5;border-radius:10px;scroll-snap-align:start;border:1px solid var(--s2)}
+.inf-pdf img{display:block;width:min(100%,420px);aspect-ratio:210/297;border-radius:6px;background:#fff}
 .teselas-sat{opacity:.9}
 .teselas-sat.ir{mix-blend-mode:screen;filter:grayscale(1) brightness(.55) contrast(2.6)}
 .fuente-cond{font-size:.45em;font-weight:500;color:var(--t2);letter-spacing:0;vertical-align:middle;white-space:nowrap}
@@ -353,11 +356,26 @@ main{max-width:1360px;margin:0 auto;padding:8px 16px 96px}
 </section>
 
 <section class="vista" id="v-informe" aria-label="Informe">
-  <div class="pila" style="max-width:720px">
-    <h2 style="font-size:26px;font-weight:600;margin:6px 0 0">Informe</h2>
-    <div class="tarjeta">
-      <p style="margin:0;color:var(--t2)">El informe en PDF y el carrusel de imágenes para Instagram se agregan en la próxima etapa. Mientras tanto, el informe diario llega por correo cada mañana.</p>
+  <div class="pila" style="max-width:980px">
+    <div>
+      <h2 style="font-size:26px;font-weight:600;margin:6px 0 0">Informe</h2>
+      <div class="meta" id="infLugar" style="padding:0">&nbsp;</div>
     </div>
+    <div class="tarjeta">
+      <h2 class="tit">Carrusel para Instagram <small style="color:var(--t3);font-weight:400">5 láminas de 1080 × 1350</small></h2>
+      <div class="inf-laminas" id="infLaminas"></div>
+      <div class="acc">
+        <button class="pill" type="button" id="btnCompartir" hidden>Compartir en Instagram u otra app</button>
+        <button class="pill" type="button" id="btnZip">Descargar imágenes</button>
+      </div>
+      <p class="nota" style="margin:10px 0 0">En el celular, «Compartir» envía las cinco láminas juntas a Instagram, WhatsApp u otra app. En el computador se descargan en un archivo comprimido.</p>
+    </div>
+    <div class="tarjeta">
+      <h2 class="tit">Informe en PDF <small style="color:var(--t3);font-weight:400">una página A4, lista para imprimir o enviar</small></h2>
+      <div class="inf-pdf" id="infPdf"></div>
+      <div class="acc"><button class="pill" type="button" id="btnPdf">Descargar PDF</button></div>
+    </div>
+    <p class="nota" id="infEstado"></p>
   </div>
 </section>
 </main>
@@ -605,6 +623,7 @@ function ir(v) {
   $$('.vista').forEach(s => s.classList.toggle('act', s.id === 'v-' + v));
   $$('.nav [data-ir], .tabs-esc [data-ir]').forEach(b => b.dataset.ir === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   if (v === 'radar') iniciarGrande();
+  if (v === 'informe') prepararInforme();
   if (v === 'hoy' && mapaM) setTimeout(() => mapaM.invalidateSize(), 50);
   window.scrollTo({ top: 0 });
 }
@@ -830,6 +849,7 @@ if (window.L) {
 const pintarTodoBase = pintarTodo;
 pintarTodo = function () {
   pintarTodoBase(); leyendaMini();
+  if ($('#v-informe').classList.contains('act')) prepararInforme();
   if (mapaM) { mapaM.setView(centro(), 7); marcaM.setLatLng(centro()); }
   if (mapaG) { mapaG.setView(centro(), 7); marcaG.setLatLng(centro()); if (modo === 'pron' && $('#v-radar').classList.contains('act')) activarModo('pron'); }
 };
@@ -899,6 +919,256 @@ $('#btnPlay').onclick = () => {
   if (!total) return;
   b.innerHTML = ico('pausa'); b.setAttribute('aria-label', 'Pausar animación');
   reproduciendo = setInterval(() => mostrar((+$('#cuadro').value + 1) % total), modo === 'radar' ? 600 : 700);
+};
+
+/* ================= Informe: carrusel para Instagram y PDF =================
+   Todo se dibuja en el navegador con los datos ya cargados; no se usa el servidor. */
+const INF = { laminas: [], pdf: null, clave: '' };
+const C = { fondo: '#06152F', s1: '#0B1F44', s2: '#112A57', t1: '#F3F8FF', t2: '#B4C6E0', t3: '#8DA4C6', celeste: '#5BC0EB', claro: '#BEE9F7', amarillo: '#FFD23F', medio: '#1E6FD9' };
+const F = (peso, px, mono) => `${peso} ${px}px ${mono ? '"Geist Mono", monospace' : 'Geist, sans-serif'}`;
+const DIAS3 = { lunes: 'LUN', martes: 'MAR', 'miércoles': 'MIÉ', jueves: 'JUE', viernes: 'VIE', 'sábado': 'SÁB', domingo: 'DOM' };
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const fechaLarga = d => d.dia + ' ' + Number(d.fecha.slice(8, 10)) + ' ' + MESES[Number(d.fecha.slice(5, 7)) - 1] + ' ' + d.fecha.slice(0, 4);
+const fechaCorta = d => Number(d.fecha.slice(8, 10)) + ' ' + MESES[Number(d.fecha.slice(5, 7)) - 1];
+const coma = x => String(x).replace('.', ',');
+let logoImg = null;
+function cargarLogo() {
+  if (logoImg) return Promise.resolve(logoImg);
+  return new Promise(ok => { const i = new Image(); i.onload = () => { logoImg = i; ok(i); }; i.onerror = () => ok(null); i.src = 'icono-192.png'; });
+}
+function cargarScript(src) {
+  return new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => mal(new Error('No se pudo cargar ' + src)); document.head.appendChild(s); });
+}
+/* Texto con ajuste de línea; devuelve la altura usada */
+function parrafo(cx, txt, x, y, ancho, alto) {
+  const palabras = String(txt).split(/\s+/); let linea = '', yy = y;
+  palabras.forEach(p => { const prueba = linea ? linea + ' ' + p : p; if (cx.measureText(prueba).width > ancho && linea) { cx.fillText(linea, x, yy); linea = p; yy += alto; } else linea = prueba; });
+  if (linea) cx.fillText(linea, x, yy);
+  return yy - y + alto;
+}
+function espaciado(cx, txt, x, y, sep) { let xx = x; for (const ch of txt) { cx.fillText(ch, xx, y); xx += cx.measureText(ch).width + sep; } return xx - x; }
+function horasDesdeAhora(n) {
+  const ahora = horaLocalActual();
+  return (E.p.horas || []).filter(h => h.tiempo.slice(0, 13) >= ahora).slice(0, n);
+}
+function riesgoPrincipal() {
+  return (E.p.riesgos || []).filter(r => r.disponible && (r.nivel === 'posible' || r.nivel === 'probable')).sort((a, b) => b.p - a.p)[0] || null;
+}
+
+/* ---------- Lámina 1080 × 1350 ---------- */
+const LW = 1080, LH = 1350, M = 72;
+function marco(cx, n, total, derecha) {
+  cx.fillStyle = C.fondo; cx.fillRect(0, 0, LW, LH);
+  if (logoImg) cx.drawImage(logoImg, M, 64, 72, 72);
+  cx.fillStyle = C.t1; cx.font = F(700, 40); cx.textBaseline = 'middle';
+  espaciado(cx, 'AUGUR', M + 96, 101, 10);
+  cx.textAlign = 'right'; cx.font = F(500, 22, true); cx.fillStyle = C.t3;
+  cx.fillText(E.loc.nombre.toUpperCase(), LW - M, 86); cx.fillText(derecha.toUpperCase(), LW - M, 118);
+  cx.textAlign = 'left'; cx.textBaseline = 'alphabetic';
+  cx.fillStyle = C.s2; cx.fillRect(M, 168, LW - 2 * M, 2); cx.fillRect(M, LH - 176, LW - 2 * M, 2);
+  cx.font = F(600, 20, true); cx.fillStyle = C.t2; cx.fillText('DESARROLLADO POR LUIS LEYTON-JOHNS', M, LH - 128);
+  cx.font = F(400, 20, true); cx.fillStyle = C.t3; cx.fillText('ORCID 0000-0002-4462-403X', M, LH - 98); cx.fillText('linkedin.com/in/luis-leyton-johns', M, LH - 68);
+  cx.textAlign = 'right'; cx.font = F(500, 30, true); cx.fillStyle = C.amarillo; cx.fillText(n + '/' + total, LW - M, LH - 70); cx.textAlign = 'left';
+}
+function rotulo(cx, txt, y) { cx.font = F(600, 24, true); cx.fillStyle = C.t2; espaciado(cx, txt.toUpperCase(), M, y, 5); }
+
+function laminaPortada(cx, total) {
+  const p = E.p, hoy = p.dias[0], a = p.actual || {};
+  marco(cx, 1, total, fechaLarga(hoy));
+  rotulo(cx, 'Hoy en ' + E.loc.nombre, 290);
+  cx.fillStyle = C.t1; cx.font = F(300, 300); const t = g(a.temp); cx.fillText(t, M - 12, 590);
+  const wt = cx.measureText(t).width; cx.font = F(300, 70); cx.fillStyle = C.celeste; cx.fillText('°C', M + wt + 8, 430);
+  cx.fillStyle = C.t1; cx.font = F(600, 54); parrafo(cx, a.texto || hoy.texto, M, 700, LW - 2 * M, 62);
+  cx.font = F(400, 30, true); cx.fillStyle = C.t2;
+  cx.fillText(`máx ${g(hoy.max.valor)}° · mín ${g(hoy.min.valor)}° · lluvia ${hoy.lluvia.prob === null ? '--' : hoy.lluvia.prob + '%'}`, M, 760);
+  cx.font = F(400, 22, true); cx.fillStyle = C.t3; cx.fillText('Consenso de ECMWF, GFS e ICON', M, 800);
+  const r = riesgoPrincipal(); const y = 880, h = 130;
+  if (r) {
+    cx.fillStyle = r.nivel === 'probable' ? C.amarillo : C.claro; cx.fillRect(M, y, LW - 2 * M, h);
+    cx.strokeStyle = C.fondo; cx.lineWidth = 3; cx.font = F(600, 22, true); const et = r.nivel.toUpperCase(); const we = cx.measureText(et).width + 28;
+    cx.strokeRect(M + 28, y + 42, we, 46); cx.fillStyle = C.fondo; cx.fillText(et, M + 42, y + 73);
+    cx.font = F(600, 32); parrafo(cx, `${r.nombre} ${r.ventana || ''} (${r.p}%)`, M + 56 + we, y + 76, LW - 2 * M - we - 80, 36);
+  } else {
+    cx.fillStyle = C.s1; cx.fillRect(M, y, LW - 2 * M, h); cx.fillStyle = C.claro; cx.font = F(500, 32);
+    cx.fillText('Sin riesgos destacados en los próximos 7 días', M + 32, y + 76);
+  }
+}
+function laminaResumen(cx, total) {
+  const p = E.p; marco(cx, 2, total, 'semana ' + fechaCorta(p.dias[0]) + ' al ' + fechaCorta(p.dias[p.dias.length - 1]));
+  rotulo(cx, 'La semana en dos párrafos', 290);
+  let y = 380; cx.fillStyle = C.t1;
+  let px = 40; const textos = (p.resumen || []).slice(0, 3);
+  const largo = textos.join(' ').length; if (largo > 620) px = 34; if (largo > 820) px = 30;
+  cx.font = F(400, px);
+  textos.forEach(t => { y += parrafo(cx, t, M, y, LW - 2 * M, px * 1.42) + px * 0.9; });
+}
+function laminaHoras(cx, total) {
+  const hs = horasDesdeAhora(12); marco(cx, 3, total, fechaLarga(E.p.dias[0]));
+  rotulo(cx, 'Próximas 12 horas', 290);
+  if (hs.length < 2) return;
+  const x0 = M + 30, x1 = LW - M - 30, X = i => x0 + (x1 - x0) * i / (hs.length - 1);
+  const ts = hs.map(h => h.temp), mn = Math.min(...ts), mx = Math.max(...ts), rg = Math.max(4, mx - mn);
+  const Y = t => 680 - (t - mn) / rg * 240;
+  cx.strokeStyle = C.celeste; cx.lineWidth = 6; cx.beginPath(); hs.forEach((h, i) => i ? cx.lineTo(X(i), Y(h.temp)) : cx.moveTo(X(i), Y(h.temp))); cx.stroke();
+  hs.forEach((h, i) => {
+    cx.fillStyle = C.fondo; cx.strokeStyle = C.claro; cx.lineWidth = 5; cx.beginPath(); cx.arc(X(i), Y(h.temp), 11, 0, 7); cx.fill(); cx.stroke();
+    cx.textAlign = 'center';
+    if (i % 2 === 0) { cx.fillStyle = C.t1; cx.font = F(500, 32); cx.fillText(g(h.temp) + '°', X(i), Y(h.temp) - 30); }
+    const hb = Math.max(4, (h.prob || 0) * 1.6); cx.fillStyle = h.prob >= 60 ? C.medio : C.s2; cx.fillRect(X(i) - 24, 960 - hb, 48, hb);
+    if (h.prob >= 10) { cx.fillStyle = C.claro; cx.font = F(500, 22, true); cx.fillText(h.prob + '%', X(i), 948 - hb); }
+    cx.fillStyle = C.t3; cx.font = F(400, 24, true); cx.fillText(h.tiempo.slice(11, 13) + 'h', X(i), 1000);
+    cx.textAlign = 'left';
+  });
+  cx.font = F(400, 22, true); cx.fillStyle = C.t3; cx.fillText('Línea: temperatura en °C · barras: probabilidad de lluvia', M, 1070);
+}
+function laminaSemana(cx, total) {
+  const ds = E.p.dias.slice(0, 7); marco(cx, 4, total, fechaCorta(ds[0]) + ' al ' + fechaCorta(ds[ds.length - 1]));
+  rotulo(cx, 'La semana', 290);
+  cx.textAlign = 'right'; cx.font = F(600, 22, true); cx.fillStyle = C.t2; cx.fillText('MÍN · MÁX · LLUVIA', LW - M, 290); cx.textAlign = 'left';
+  const mn = Math.min(...ds.map(d => d.min.valor)), mx = Math.max(...ds.map(d => d.max.valor));
+  const bx0 = M + 150, bx1 = LW - M - 230, BX = t => bx0 + (bx1 - bx0) * (t - mn) / Math.max(1, mx - mn);
+  ds.forEach((d, i) => {
+    const y = 380 + i * 104;
+    cx.fillStyle = C.s1; cx.fillRect(M, y + 36, LW - 2 * M, 2);
+    cx.fillStyle = C.t1; cx.font = F(700, 40); cx.fillText(DIAS3[d.dia] || d.dia.slice(0, 3).toUpperCase(), M, y + 14);
+    cx.fillStyle = C.s2; cx.fillRect(bx0, y - 2, bx1 - bx0, 8);
+    cx.fillStyle = C.celeste; cx.fillRect(BX(d.min.valor), y - 4, Math.max(8, BX(d.max.valor) - BX(d.min.valor)), 12);
+    cx.font = F(500, 24, true); cx.fillStyle = C.t2; cx.textAlign = 'center';
+    cx.fillText(g(d.min.valor), BX(d.min.valor), y - 18); cx.fillText(g(d.max.valor), BX(d.max.valor), y - 18);
+    cx.textAlign = 'right'; const pr = d.lluvia.prob;
+    cx.font = F(500, 34, true); cx.fillStyle = pr >= 60 ? C.amarillo : C.celeste; cx.fillText(pr === null ? '--' : pr + '%', LW - M, y + 14);
+    if (d.lluvia.mm >= 0.5) { cx.font = F(400, 22, true); cx.fillStyle = C.t3; cx.fillText(coma(d.lluvia.mm) + ' mm', LW - M - 120, y + 12); }
+    cx.textAlign = 'left';
+  });
+}
+function laminaRiesgos(cx, total) {
+  const rs = (E.p.riesgos || []).filter(r => r.disponible); const ds = E.p.dias;
+  marco(cx, 5, total, fechaCorta(ds[0]) + ' al ' + fechaCorta(ds[ds.length - 1]));
+  rotulo(cx, 'Riesgos de la semana', 290);
+  rs.slice(0, 5).forEach((r, i) => {
+    const y = 380 + i * 140;
+    cx.fillStyle = C.t1; cx.font = F(600, 36); cx.fillText(r.nombre, M, y);
+    cx.textAlign = 'right'; cx.font = F(500, 30, true); cx.fillStyle = r.nivel === 'probable' ? C.amarillo : r.nivel === 'posible' ? C.celeste : C.t3;
+    cx.fillText(r.p + '%' + (r.nivel !== 'bajo' ? ' ' + r.nivel.toUpperCase() : ''), LW - M, y); cx.textAlign = 'left';
+    const w = LW - 2 * M; cx.fillStyle = C.s1; cx.fillRect(M, y + 26, w, 18);
+    cx.fillStyle = r.nivel === 'probable' ? C.amarillo : C.celeste; cx.fillRect(M, y + 26, Math.max(6, w * r.p / 100), 18);
+    cx.fillStyle = C.t3; [30, 60].forEach(u => cx.fillRect(M + w * u / 100 - 1, y + 18, 3, 34));
+    if (r.ventana && r.nivel !== 'bajo') { cx.font = F(400, 22, true); cx.fillStyle = C.t2; cx.fillText('Pico ' + r.ventana, M, y + 82); }
+  });
+  cx.font = F(400, 21, true); cx.fillStyle = C.t3;
+  parrafo(cx, 'Porcentaje de escenarios de los ensembles ECMWF y GFS que superan cada umbral. Marcas: posible (30%) y probable (60%). Son estimaciones de modelos; no reemplazan los avisos oficiales de la DMC ni de SENAPRED.', M, 1088, LW - 2 * M, 30);
+}
+const LAMINAS = [laminaPortada, laminaResumen, laminaHoras, laminaSemana, laminaRiesgos];
+
+/* ---------- Página A4 del PDF (fondo claro, para imprimir) ---------- */
+const AW = 1240, AH = 1754, AM = 80;
+function paginaPdf() {
+  const cv = document.createElement('canvas'); cv.width = AW; cv.height = AH; const cx = cv.getContext('2d');
+  const p = E.p, hoy = p.dias[0], a = p.actual || {}, OSC = '#0A1F44', TEN = '#4F6585', LIN = '#DCE4EE', AZ = '#0B3D91';
+  cx.fillStyle = '#FFFFFF'; cx.fillRect(0, 0, AW, AH);
+  cx.fillStyle = C.fondo; cx.fillRect(0, 0, AW, 150);
+  if (logoImg) cx.drawImage(logoImg, AM, 39, 72, 72);
+  cx.fillStyle = C.t1; cx.font = F(700, 38); cx.textBaseline = 'middle'; espaciado(cx, 'AUGUR', AM + 92, 75, 9);
+  cx.textAlign = 'right'; cx.font = F(600, 30); cx.fillText('Informe del tiempo · ' + E.loc.nombre, AW - AM, 62);
+  cx.font = F(400, 22, true); cx.fillStyle = C.claro; cx.fillText(fechaLarga(hoy) + ' · actualizado ' + horaLocal(p.generado), AW - AM, 98);
+  cx.textAlign = 'left'; cx.textBaseline = 'alphabetic';
+  // Hoy
+  cx.fillStyle = OSC; cx.font = F(300, 140); const t = g(a.temp); cx.fillText(t + '°', AM - 6, 300);
+  const xs = AM + cx.measureText(t + '°').width + 30;
+  cx.font = F(600, 36); cx.fillText(a.texto || hoy.texto, xs, 214);
+  cx.font = F(400, 24); cx.fillStyle = TEN; cx.fillText('Estado actual según el consenso de los modelos', xs, 250);
+  cx.font = F(500, 26, true); cx.fillStyle = OSC;
+  cx.fillText(`Máx ${g(hoy.max.valor)}° · Mín ${g(hoy.min.valor)}° · Lluvia ${hoy.lluvia.prob === null ? '--' : hoy.lluvia.prob + '%'} (${coma(hoy.lluvia.mm || 0)} mm) · Ráfagas ${g(hoy.rafaga.max)} km/h`, xs, 294);
+  // Resumen
+  let y = 370; cx.fillStyle = AZ; cx.font = F(600, 22, true); espaciado(cx, 'RESUMEN', AM, y, 4); y += 38;
+  cx.fillStyle = '#1B2433'; cx.font = F(400, 23);
+  (p.resumen || []).forEach(tx => { y += parrafo(cx, tx, AM, y, AW - 2 * AM, 32) + 10; });
+  // Próximas horas
+  y += 24; cx.fillStyle = AZ; cx.font = F(600, 22, true); espaciado(cx, 'PRÓXIMAS 24 HORAS', AM, y, 4);
+  const hs = horasDesdeAhora(24), gy = y + 30, gh = 170;
+  if (hs.length > 1) {
+    const X = i => AM + 20 + (AW - 2 * AM - 40) * i / (hs.length - 1), ts = hs.map(h => h.temp), mn = Math.min(...ts), rg = Math.max(4, Math.max(...ts) - mn), Y = v => gy + 80 - (v - mn) / rg * 60;
+    hs.forEach((h, i) => { const hb = (h.prob || 0) * .55; cx.fillStyle = h.prob >= 60 ? '#5B8FD9' : '#C9DAF0'; cx.fillRect(X(i) - 12, gy + gh - 40 - hb, 24, hb); });
+    cx.strokeStyle = '#E0A800'; cx.lineWidth = 4; cx.beginPath(); hs.forEach((h, i) => i ? cx.lineTo(X(i), Y(h.temp)) : cx.moveTo(X(i), Y(h.temp))); cx.stroke();
+    cx.textAlign = 'center';
+    hs.forEach((h, i) => { if (i % 3 === 0) { cx.fillStyle = OSC; cx.font = F(500, 20); cx.fillText(g(h.temp) + '°', X(i), Y(h.temp) - 14); cx.fillStyle = TEN; cx.font = F(400, 18, true); cx.fillText(h.tiempo.slice(11, 13) + 'h', X(i), gy + gh - 10); } });
+    cx.textAlign = 'left';
+  }
+  y = gy + gh + 26; cx.font = F(400, 18, true); cx.fillStyle = TEN; cx.fillText('Línea: temperatura (°C) · barras: probabilidad de lluvia', AM, y - 6);
+  // Tabla semanal
+  y += 34; cx.fillStyle = AZ; cx.font = F(600, 22, true); espaciado(cx, 'SIETE DÍAS · MÁXIMA POR MODELO Y CONSENSO AUGUR', AM, y, 3); y += 20;
+  const nom = p.fuentes.modelos || ['ECMWF', 'GFS', 'ICON'];
+  const col = [AM, AM + 220, AM + 330, AM + 440, AM + 550, AM + 660, AM + 770, AM + 975];
+  const cab = ['Día', ...nom, 'Augur', 'Mín', 'Lluvia', 'Acuerdo'];
+  cx.font = F(600, 20); cx.fillStyle = TEN; cab.forEach((c, i) => cx.fillText(c, col[i], y + 30));
+  y += 42; cx.fillStyle = LIN; cx.fillRect(AM, y, AW - 2 * AM, 2);
+  p.dias.slice(0, 7).forEach(d => {
+    y += 38; cx.fillStyle = OSC; cx.font = F(500, 21); cx.fillText(capital(d.dia) + ' ' + fechaCorta(d), col[0], y);
+    cx.font = F(400, 22, true); (d.max.modelos || []).forEach((v, k) => cx.fillText(v === null ? 's/d' : g(v) + '°', col[1 + k], y));
+    cx.font = F(700, 22, true); cx.fillText(g(d.max.valor) + '°', col[4], y);
+    cx.font = F(400, 22, true); cx.fillText(g(d.min.valor) + '°', col[5], y);
+    cx.fillText((d.lluvia.prob === null ? '--' : d.lluvia.prob + '%') + (d.lluvia.mm >= 0.5 ? ' · ' + coma(d.lluvia.mm) + ' mm' : ''), col[6], y);
+    cx.fillStyle = d.max.acuerdo === 'bajo' ? '#B7791F' : TEN; cx.fillText(d.max.acuerdo, col[7], y);
+    cx.fillStyle = LIN; cx.fillRect(AM, y + 13, AW - 2 * AM, 1);
+  });
+  // Riesgos
+  y += 56; cx.fillStyle = AZ; cx.font = F(600, 22, true); espaciado(cx, 'RIESGOS (ESCENARIOS DEL ENSEMBLE)', AM, y, 3); y += 16;
+  (p.riesgos || []).filter(r => r.disponible).forEach(r => {
+    y += 36; cx.fillStyle = OSC; cx.font = F(500, 21); cx.fillText(r.nombre, AM, y);
+    const bx = AM + 300, bw = 480; cx.fillStyle = '#EDF2F8'; cx.fillRect(bx, y - 16, bw, 14);
+    cx.fillStyle = r.nivel === 'probable' ? '#E0A800' : r.nivel === 'posible' ? '#5BA4E6' : '#B9C7D9'; cx.fillRect(bx, y - 16, Math.max(4, bw * r.p / 100), 14);
+    cx.fillStyle = TEN; [30, 60].forEach(u => cx.fillRect(bx + bw * u / 100, y - 22, 2, 26));
+    cx.fillStyle = OSC; cx.font = F(500, 20, true); cx.fillText(r.p + '% ' + r.nivel + (r.nivel !== 'bajo' && r.ventana ? ', ' + r.ventana : ''), bx + bw + 24, y);
+  });
+  // Pie
+  cx.fillStyle = LIN; cx.fillRect(AM, AH - 140, AW - 2 * AM, 2);
+  cx.fillStyle = OSC; cx.font = F(600, 20); cx.fillText('Desarrollado por Luis Leyton-Johns', AM, AH - 104);
+  cx.font = F(400, 18, true); cx.fillStyle = TEN; cx.fillText('ORCID 0000-0002-4462-403X · linkedin.com/in/luis-leyton-johns', AM, AH - 76);
+  cx.font = F(400, 16); parrafo(cx, 'Datos: Open-Meteo (ECMWF IFS, GFS, ICON y ensembles ECMWF y GFS). Los riesgos son estimaciones de modelos y no reemplazan los avisos oficiales de la Dirección Meteorológica de Chile ni de SENAPRED.', AM, AH - 48, AW - 2 * AM, 22);
+  return cv;
+}
+
+/* ---------- Generación y vista previa ---------- */
+async function prepararInforme() {
+  if (!E.p || !E.loc) return;
+  const clave = E.loc.nombre + E.p.generado;
+  if (INF.clave === clave && INF.laminas.length) return;
+  $('#infEstado').textContent = 'Preparando el informe…';
+  try { await Promise.all([document.fonts.load(F(300, 100)), document.fonts.load(F(600, 40)), document.fonts.load(F(700, 40)), document.fonts.load(F(400, 30, true)), document.fonts.load(F(500, 30, true))]); } catch (e) {}
+  await cargarLogo();
+  INF.laminas = LAMINAS.map(fn => { const cv = document.createElement('canvas'); cv.width = LW; cv.height = LH; fn(cv.getContext('2d'), LAMINAS.length); return cv; });
+  INF.pdf = paginaPdf(); INF.clave = clave;
+  $('#infLaminas').innerHTML = ''; INF.laminas.forEach((cv, i) => { const im = new Image(); im.src = cv.toDataURL('image/jpeg', .85); im.alt = 'Lámina ' + (i + 1) + ' del carrusel'; $('#infLaminas').appendChild(im); });
+  const pv = new Image(); pv.src = INF.pdf.toDataURL('image/jpeg', .8); pv.alt = 'Vista previa del informe PDF'; $('#infPdf').innerHTML = ''; $('#infPdf').appendChild(pv);
+  $('#infLugar').textContent = E.loc.nombre + ' · ' + fechaLarga(E.p.dias[0]);
+  $('#infEstado').textContent = '';
+  $('#btnCompartir').hidden = !(navigator.canShare && navigator.canShare({ files: [new File([new Blob(['x'])], 'x.png', { type: 'image/png' })] }));
+}
+const aBlob = (cv, tipo, q) => new Promise(ok => cv.toBlob(ok, tipo, q));
+const nombreBase = () => 'augur_' + E.loc.nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_') + '_' + E.p.dias[0].fecha;
+function bajar(blob, nombre) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+async function archivosLaminas() { return Promise.all(INF.laminas.map(async (cv, i) => new File([await aBlob(cv, 'image/png')], nombreBase() + '_' + (i + 1) + '.png', { type: 'image/png' }))); }
+$('#btnCompartir').onclick = async () => {
+  await prepararInforme();
+  try { await navigator.share({ files: await archivosLaminas(), title: 'Augur · ' + E.loc.nombre }); } catch (e) { if (e && e.name !== 'AbortError') estado('No se pudo compartir: ' + e.message, 5000); }
+};
+$('#btnZip').onclick = async () => {
+  await prepararInforme(); estado('Preparando imágenes…');
+  try {
+    if (!window.JSZip) await cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+    const zip = new JSZip(); (await archivosLaminas()).forEach(f => zip.file(f.name, f));
+    bajar(await zip.generateAsync({ type: 'blob' }), nombreBase() + '_instagram.zip'); estado('Listo: 5 imágenes de 1080 × 1350', 4000);
+  } catch (e) { estado('No se pudo descargar: ' + e.message, 6000); }
+};
+$('#btnPdf').onclick = async () => {
+  await prepararInforme(); estado('Preparando PDF…');
+  try {
+    if (!window.jspdf) await cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', compress: true });
+    doc.setProperties({ title: 'Augur · Informe del tiempo · ' + E.loc.nombre, author: 'Luis Leyton-Johns', subject: 'Pronóstico de consenso ECMWF, GFS e ICON' });
+    doc.addImage(INF.pdf.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, 210, 297);
+    bajar(doc.output('blob'), nombreBase() + '.pdf'); estado('PDF descargado', 3000);
+  } catch (e) { estado('No se pudo generar el PDF: ' + e.message, 6000); }
 };
 </script>
 <script>
