@@ -1,0 +1,8 @@
+{
+  // Augur: publicación de la interfaz estática en Cloudflare
+  "name": "augur",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "."
+  }
+}
