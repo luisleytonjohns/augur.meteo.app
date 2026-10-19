@@ -176,6 +176,20 @@ main{max-width:1360px;margin:0 auto;padding:8px 16px 96px}
 .mapa-caja{position:relative}
 .leyenda-radar{position:absolute;left:8px;right:8px;bottom:22px;z-index:500;background:rgba(6,18,46,.86);color:#cfe3ff;font-size:12px;line-height:1.35;padding:6px 9px;border-radius:8px;pointer-events:none}
 .leyenda-radar b{color:#fff}
+.adm-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.adm-form input[type=email],.adm-form input[type=text],.adm-form select,.adm-campo{width:100%;height:46px;border-radius:12px;border:0;background:var(--s2);color:var(--t1);padding:0 14px;font:15px var(--sans);box-sizing:border-box}
+textarea.adm-campo{height:auto;padding:12px 14px;resize:vertical;margin-top:10px;line-height:1.45}
+.adm-form .adm-op,.adm-form button{grid-column:1/-1}
+.adm-op{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;color:var(--t2)}
+.adm-op label{display:inline-flex;align-items:center;gap:6px}
+.adm-fila{display:grid;grid-template-columns:1fr auto;gap:8px 12px;padding:14px 0;border-top:1px solid var(--s2)}
+.adm-fila:first-child{border-top:0}
+.adm-q{display:flex;flex-direction:column;gap:2px;min-width:0}.adm-q span{font-size:13px;color:var(--t3);overflow-wrap:anywhere}
+.adm-est{align-self:start;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--s2);color:var(--t2);white-space:nowrap}
+.adm-est.activo{background:rgba(91,192,235,.18);color:var(--celeste)}.adm-est.pendiente{background:rgba(255,210,63,.16);color:var(--amarillo)}
+.adm-fila .adm-op,.adm-acc{grid-column:1/-1}.adm-acc{display:flex;flex-wrap:wrap;gap:4px}
+.adm-acc .pill{height:32px;font-size:13px;padding:0 10px}.pill.peligro{color:#FF8A8A}
+@media(max-width:600px){.adm-form{grid-template-columns:1fr}}
 .inf-laminas{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
 .inf-laminas img{flex:0 0 auto;width:min(62vw,240px);aspect-ratio:4/5;border-radius:10px;scroll-snap-align:start;border:1px solid var(--s2)}
 .inf-pdf img{display:block;width:min(100%,420px);aspect-ratio:210/297;border-radius:6px;background:#fff}
@@ -351,6 +365,43 @@ main{max-width:1360px;margin:0 auto;padding:8px 16px 96px}
     <div class="origen">
       <div><h4><span class="tag mod">MODELO</span> Dato original</h4><ul><li>Valores tal como los entrega Open-Meteo para ECMWF IFS, GFS e ICON</li><li>Sin corrección local</li></ul></div>
       <div><h4><span class="tag der">AUGUR</span> Dato derivado</h4><ul><li>Consenso, rango y nivel de acuerdo</li><li>Probabilidades desde el ensemble</li><li>Resumen en lenguaje natural</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="vista" id="v-admin" aria-label="Administración">
+  <div class="pila" style="max-width:980px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div><h2 style="font-size:26px;font-weight:600;margin:6px 0 0">Administración</h2>
+        <div class="meta" style="padding:0"><span id="admCorreo"></span> · <span id="admCuota"></span></div></div>
+      <button class="pill sec" type="button" id="admSalir">Cerrar sesión</button>
+    </div>
+    <div class="tarjeta">
+      <h2 class="tit">Agregar destinatario</h2>
+      <form id="admForm" class="adm-form" autocomplete="off">
+        <input name="correo" type="email" required placeholder="correo@ejemplo.cl" aria-label="Correo">
+        <input name="nombre" type="text" placeholder="Nombre (opcional)" aria-label="Nombre">
+        <select name="loc" id="admLoc" aria-label="Localidad del informe"></select>
+        <div class="adm-op"><label><input type="checkbox" name="inf" checked> Informe diario</label><label><input type="checkbox" name="avi" checked> Avisos</label><label><input type="checkbox" name="nov" checked> Novedades</label></div>
+        <button class="pill" type="submit">Agregar y enviar confirmación</button>
+      </form>
+      <p class="nota" style="margin:10px 0 0">La persona recibe un correo para confirmar. Hasta que confirme no le llega nada más; cada correo trae un enlace para darse de baja.</p>
+    </div>
+    <div class="tarjeta">
+      <h2 class="tit">Destinatarios <small id="admResumen" style="color:var(--t3);font-weight:400"></small></h2>
+      <div id="admLista"></div>
+    </div>
+    <div class="tarjeta">
+      <h2 class="tit">Envíos <small id="admNov" style="color:var(--t3);font-weight:400"></small></h2>
+      <div class="acc" style="margin-top:0">
+        <button class="pill" type="button" id="admInforme">Enviar el informe de hoy ahora</button>
+        <button class="pill sec" type="button" id="admInvPrueba">Probar invitación conmigo</button>
+        <button class="pill" type="button" id="admInv">Enviar invitación a instalar</button>
+      </div>
+      <h3 style="font-size:15px;margin:20px 0 8px">Novedad</h3>
+      <input id="novAsunto" class="adm-campo" type="text" maxlength="120" placeholder="Asunto" aria-label="Asunto de la novedad">
+      <textarea id="novMensaje" class="adm-campo" rows="6" placeholder="Mensaje. Deja una línea en blanco entre párrafos." aria-label="Mensaje de la novedad"></textarea>
+      <div class="acc"><button class="pill sec" type="button" id="admNovPrueba">Enviarme una prueba</button><button class="pill" type="button" id="admNovEnviar">Enviar a los destinatarios</button></div>
     </div>
   </div>
 </section>
@@ -624,6 +675,7 @@ function ir(v) {
   $$('.nav [data-ir], .tabs-esc [data-ir]').forEach(b => b.dataset.ir === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   if (v === 'radar') iniciarGrande();
   if (v === 'informe') prepararInforme();
+  if (v === 'admin') abrirAdmin();
   if (v === 'hoy' && mapaM) setTimeout(() => mapaM.invalidateSize(), 50);
   window.scrollTo({ top: 0 });
 }
@@ -1169,6 +1221,116 @@ $('#btnPdf').onclick = async () => {
     doc.addImage(INF.pdf.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, 210, 297);
     bajar(doc.output('blob'), nombreBase() + '.pdf'); estado('PDF descargado', 3000);
   } catch (e) { estado('No se pudo generar el PDF: ' + e.message, 6000); }
+};
+
+/* ================= Administración =================
+   Acceso con Google Identity Services; el servidor valida la credencial y el correo. */
+const ADM = { credencial: null, correo: '', vence: 0, dest: [], locs: [], cuota: null };
+try { const s = JSON.parse(sessionStorage.getItem('augur.adm') || 'null'); if (s && s.vence > Date.now() + 60000) Object.assign(ADM, s); } catch (e) {}
+function guardarSesion() { try { sessionStorage.setItem('augur.adm', JSON.stringify({ credencial: ADM.credencial, correo: ADM.correo, vence: ADM.vence })); } catch (e) {} }
+function cerrarSesion() {
+  ADM.credencial = null; ADM.correo = ''; ADM.vence = 0;
+  try { sessionStorage.removeItem('augur.adm'); } catch (e) {}
+  try { google.accounts.id.disableAutoSelect(); } catch (e) {}
+  ir('hoy'); estado('Sesión cerrada', 3000);
+}
+function enviarAdmin(accion, extra) {
+  if (!ADM.credencial || ADM.vence < Date.now()) { cerrarSesion(); return Promise.reject(new Error('La sesión venció. Vuelve a entrar.')); }
+  return fetch(API, { method: 'POST', redirect: 'follow', body: JSON.stringify(Object.assign({ accion: accion, credencial: ADM.credencial }, extra || {})) })
+    .then(r => r.json()).then(j => { if (!j.ok) throw new Error(j.error || 'Error del servidor'); return j.datos; });
+}
+function idCliente() { return (E.app && E.app.googleClientId) || ''; }
+HOJAS.cuenta = function () {
+  if (ADM.correo && ADM.vence > Date.now()) { ir('admin'); return; }
+  if (!idCliente()) {
+    abrir(`<h3 id="hojaTit">Administración</h3><p style="color:var(--t2)">Falta configurar el acceso con Google: agrega el ID de cliente en <b>googleClientId</b> de Config.gs.</p>`);
+    return;
+  }
+  abrir(`<h3 id="hojaTit">Administración</h3>
+    <p style="color:var(--t2)">Entra con tu cuenta de Google para gestionar los destinatarios y los envíos. Solo las cuentas autorizadas tienen acceso.</p>
+    <div id="gBoton" style="min-height:44px;margin:16px 0"></div><p class="nota" id="gEstado"></p>`);
+  const pintar = () => {
+    google.accounts.id.initialize({ client_id: idCliente(), callback: alEntrar, auto_select: false, ux_mode: 'popup' });
+    google.accounts.id.renderButton($('#gBoton'), { theme: 'filled_blue', size: 'large', shape: 'pill', text: 'signin_with', locale: 'es' });
+  };
+  if (window.google && google.accounts && google.accounts.id) pintar();
+  else cargarScript('https://accounts.google.com/gsi/client').then(pintar).catch(() => { $('#gEstado').textContent = 'No se pudo cargar el acceso de Google. Revisa tu conexión.'; });
+};
+function alEntrar(resp) {
+  const cred = resp && resp.credential; if (!cred) return;
+  let carga = {}; try { carga = JSON.parse(decodeURIComponent(escape(atob(cred.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))))); } catch (e) {}
+  ADM.credencial = cred; ADM.vence = (carga.exp || 0) * 1000; ADM.correo = '';
+  if ($('#gEstado')) $('#gEstado').textContent = 'Verificando…';
+  enviarAdmin('sesion').then(d => {
+    ADM.correo = d.correo; ADM.cuota = d.cuota; guardarSesion(); cerrar(); ir('admin');
+  }).catch(err => { ADM.credencial = null; if ($('#gEstado')) $('#gEstado').textContent = err.message; else estado(err.message, 6000); });
+}
+
+/* ---------- Panel ---------- */
+function abrirAdmin() {
+  $('#admCorreo').textContent = ADM.correo;
+  $('#admLista').innerHTML = '<p class="nota">Cargando destinatarios…</p>';
+  enviarAdmin('listar').then(d => { ADM.dest = d.destinatarios; ADM.locs = d.localidades; ADM.cuota = d.cuota; pintarAdmin(); })
+    .catch(err => { $('#admLista').innerHTML = `<p class="nota">${esc(err.message)}</p>`; });
+}
+const ESTADO_TXT = { pendiente: 'Pendiente de confirmar', activo: 'Activo', baja: 'De baja' };
+function pintarAdmin() {
+  $('#admCuota').textContent = ADM.cuota === null ? '' : 'Quedan ' + ADM.cuota + ' correos hoy';
+  const sel = $('#admLoc'); if (sel && !sel.options.length) sel.innerHTML = '<option value="">Primera localidad</option>' + ADM.locs.map(l => `<option value="${esc(l.id)}">${esc(l.nombre)}</option>`).join('');
+  const n = { activo: 0, pendiente: 0, baja: 0 }; ADM.dest.forEach(d => n[d.estado] = (n[d.estado] || 0) + 1);
+  $('#admResumen').textContent = `${n.activo} activos · ${n.pendiente} pendientes · ${n.baja} de baja`;
+  const nov = ADM.dest.filter(d => d.estado === 'activo' && d.recibe_novedades).length;
+  $('#admNov').textContent = nov + (nov === 1 ? ' destinatario recibe' : ' destinatarios reciben') + ' novedades';
+  if (!ADM.dest.length) { $('#admLista').innerHTML = '<p class="nota">Todavía no hay destinatarios. Mientras tanto, el informe diario llega solo a tu correo.</p>'; return; }
+  const locNom = id => (ADM.locs.find(l => l.id === id) || {}).nombre || 'Primera localidad';
+  $('#admLista').innerHTML = ADM.dest.map((d, i) => `
+    <div class="adm-fila">
+      <div class="adm-q"><b>${esc(d.nombre || d.correo)}</b>${d.nombre ? `<span>${esc(d.correo)}</span>` : ''}
+        <span>${esc(locNom(d.localidad_id))} · alta ${esc(d.fecha_alta.slice(0, 10))}</span></div>
+      <span class="adm-est ${d.estado}">${ESTADO_TXT[d.estado] || d.estado}</span>
+      <div class="adm-op">
+        <label><input type="checkbox" data-i="${i}" data-k="recibe_informe" ${d.recibe_informe ? 'checked' : ''}> Informe</label>
+        <label><input type="checkbox" data-i="${i}" data-k="recibe_avisos" ${d.recibe_avisos ? 'checked' : ''}> Avisos</label>
+        <label><input type="checkbox" data-i="${i}" data-k="recibe_novedades" ${d.recibe_novedades ? 'checked' : ''}> Novedades</label>
+      </div>
+      <div class="adm-acc">
+        ${d.estado !== 'activo' ? `<button class="pill sec" type="button" data-i="${i}" data-a="reenviar">Reenviar confirmación</button>` : `<button class="pill sec" type="button" data-i="${i}" data-a="informe">Enviarle el informe</button>`}
+        ${d.estado !== 'baja' ? `<button class="pill sec" type="button" data-i="${i}" data-a="baja">Dar de baja</button>` : ''}
+        <button class="pill sec peligro" type="button" data-i="${i}" data-a="eliminar">Eliminar</button>
+      </div>
+    </div>`).join('');
+  $$('#admLista input[type=checkbox]').forEach(c => c.onchange = () => {
+    const d = ADM.dest[c.dataset.i]; operar('actualizar', { correo: d.correo, cambios: { [c.dataset.k]: c.checked } });
+  });
+  $$('#admLista [data-a]').forEach(b => b.onclick = () => {
+    const d = ADM.dest[b.dataset.i], a = b.dataset.a;
+    if (a === 'eliminar' && !confirm('¿Eliminar a ' + d.correo + ' de la lista? No se puede deshacer.')) return;
+    if (a === 'baja' && !confirm('¿Dar de baja a ' + d.correo + '? Dejará de recibir correos.')) return;
+    operar(a, { correo: d.correo });
+  });
+}
+function operar(accion, extra, boton) {
+  if (boton) boton.disabled = true; estado('Procesando…');
+  return enviarAdmin(accion, extra).then(d => {
+    if (d.destinatarios) ADM.dest = d.destinatarios;
+    if (d.cuota !== undefined) ADM.cuota = d.cuota;
+    pintarAdmin(); estado(d.mensaje || 'Listo', 5000); return d;
+  }).catch(err => { estado(err.message, 7000); pintarAdmin(); throw err; }).finally(() => { if (boton) boton.disabled = false; });
+}
+$('#admForm').onsubmit = ev => {
+  ev.preventDefault();
+  const f = ev.target;
+  operar('agregar', { destinatario: { correo: f.correo.value, nombre: f.nombre.value, localidad_id: f.loc.value, recibe_informe: f.inf.checked, recibe_avisos: f.avi.checked, recibe_novedades: f.nov.checked } }, f.querySelector('button'))
+    .then(() => { f.correo.value = ''; f.nombre.value = ''; }).catch(() => {});
+};
+$('#admSalir').onclick = cerrarSesion;
+$('#admInforme').onclick = ev => { if (confirm('¿Enviar ahora el informe de hoy a todos los que lo reciben?')) operar('informe', {}, ev.target).catch(() => {}); };
+$('#admInvPrueba').onclick = ev => operar('invitacion', { prueba: true }, ev.target).catch(() => {});
+$('#admInv').onclick = ev => { if (confirm('¿Enviar la invitación a instalar Augur a todos los activos que reciben novedades?')) operar('invitacion', {}, ev.target).catch(() => {}); };
+$('#admNovPrueba').onclick = ev => operar('novedad', { asunto: $('#novAsunto').value, mensaje: $('#novMensaje').value, prueba: true }, ev.target).catch(() => {});
+$('#admNovEnviar').onclick = ev => {
+  if (!confirm('¿Enviar esta novedad a todos los activos que reciben novedades?')) return;
+  operar('novedad', { asunto: $('#novAsunto').value, mensaje: $('#novMensaje').value }, ev.target).then(() => { $('#novAsunto').value = ''; $('#novMensaje').value = ''; }).catch(() => {});
 };
 </script>
 <script>
