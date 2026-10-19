@@ -176,6 +176,7 @@ main{max-width:1360px;margin:0 auto;padding:8px 16px 96px}
 .mapa-caja{position:relative}
 .leyenda-radar{position:absolute;left:8px;right:8px;bottom:22px;z-index:500;background:rgba(6,18,46,.86);color:#cfe3ff;font-size:12px;line-height:1.35;padding:6px 9px;border-radius:8px;pointer-events:none}
 .leyenda-radar b{color:#fff}
+.oficiales{margin-top:14px;padding-top:12px;border-top:1px solid var(--s2);font-size:14px;color:var(--t2)}.oficiales p{margin:0}.oficiales b{color:var(--t1)}
 .adm-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .adm-form input[type=email],.adm-form input[type=text],.adm-form select,.adm-campo{width:100%;height:46px;border-radius:12px;border:0;background:var(--s2);color:var(--t1);padding:0 14px;font:15px var(--sans);box-sizing:border-box}
 textarea.adm-campo{height:auto;padding:12px 14px;resize:vertical;margin-top:10px;line-height:1.45}
@@ -291,6 +292,13 @@ textarea.adm-campo{height:auto;padding:12px 14px;resize:vertical;margin-top:10px
     <div class="tarjeta">
       <h2 class="tit">Riesgos según modelos <small>no son alertas oficiales</small></h2>
       <div class="riesgos" id="riesgos"></div>
+      <div class="oficiales">
+        <p><b>Lo oficial manda.</b> Antes de decidir, revisa los avisos vigentes:</p>
+        <div class="acc" style="margin-top:6px">
+          <a class="pill" href="https://www.meteochile.gob.cl/" target="_blank" rel="noopener">Avisos de la DMC</a>
+          <a class="pill" href="https://senapred.cl/" target="_blank" rel="noopener">Alertas de SENAPRED</a>
+        </div>
+      </div>
       <p class="nota">Porcentaje de escenarios del ensemble que superan cada umbral. Línea: 30%.</p>
     </div>
   </div>

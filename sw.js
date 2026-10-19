@@ -1,5 +1,5 @@
 /* AUGUR · sw.js · guarda la interfaz para que abra rápido; los datos siempre se piden al servidor */
-const CACHE = 'augur-v6';
+const CACHE = 'augur-v7';
 const ARCHIVOS = ['./', './index.html', './manifest.webmanifest', './icono-192.png', './icono-512.png', './favicon-32.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARCHIVOS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {
